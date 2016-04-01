@@ -403,31 +403,14 @@ Required properties:
 
 Required properties:
 
- - compatible :                            "qcom,msm-cdc-pinctrl"
+ - compatible :                            "qcom,wcd-gpio-ctrl"
 
  - qcom,cdc-rst-n-gpio :                   TLMM GPIO number
 
  - pinctrl-names:                          Pinctrl state names for each pin
                                            group configuration.
  - pinctrl-x:                              Defines pinctrl state for each pin
-                                           group.
-* msm_cdc_pinctrl
-
-Required properties:
-
- - compatible :                            "qcom,msm-cdc-pinctrl"
-
- - pinctrl-names:                          Pinctrl state names for each pin
-                                           group configuration.
- - pinctrl-x:                              Defines pinctrl state for each pin
-                                           group.
-
-* wcd_dsp_glink
-
-Required properties:
-
- - compatible :                            "qcom,wcd-dsp-glink"
-
+                                           group
 Example:
 
 	qcom,msm-pcm {
@@ -699,24 +682,12 @@ Example:
 	};
 
 	wcd_gpio_ctrl {
-		compatible = "qcom,msm-cdc-pinctrl";
+		compatible = "qcom,wcd-gpio-ctrl";
 		qcom,cdc-rst-n-gpio = <&tlmm 64 0>;
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&cdc_reset_active>;
 		pinctrl-1 = <&cdc_reset_sleep>;
 	};
-
-	msm_cdc_pinctrl {
-		compatible = "qcom,msm-cdc-pinctrl";
-		pinctrl-names = "aud_active", "aud_sleep";
-		pinctrl-0 = <&cdc_reset_active>;
-		pinctrl-1 = <&cdc_reset_sleep>;
-	};
-
-	wcd_dsp_glink {
-		compatible = "qcom,wcd-dsp-glink";
-	};
-
 
 * MSM8916 ASoC Machine driver
 

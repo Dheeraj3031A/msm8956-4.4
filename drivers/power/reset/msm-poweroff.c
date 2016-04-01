@@ -75,6 +75,15 @@ static void scm_disable_sdi(void);
 */
 
 static int in_panic;
+static void *dload_mode_addr;
+static bool dload_mode_enabled;
+static void *emergency_dload_mode_addr;
+static bool scm_dload_supported;
+
+static int dload_set(const char *val, struct kernel_param *kp);
+int download_mode = 0;
+module_param_call(download_mode, dload_set, param_get_int,
+			&download_mode, 0644);
 static int panic_prep_restart(struct notifier_block *this,
 			      unsigned long event, void *ptr)
 {

@@ -156,7 +156,37 @@ struct msm_otg_platform_data {
 	enum usb_dr_mode mode;
 	enum otg_control_type otg_control;
 	enum msm_usb_phy_type phy_type;
-	void (*setup_gpio)(enum usb_otg_state state);
+	int pmic_id_irq;
+	unsigned int mpm_otgsessvld_int;
+	unsigned int mpm_dpshv_int;
+	unsigned int mpm_dmshv_int;
+	bool mhl_enable;
+	bool disable_reset_on_disconnect;
+	bool pnoc_errata_fix;
+	bool enable_lpm_on_dev_suspend;
+	bool core_clk_always_on_workaround;
+	bool delay_lpm_on_disconnect;
+	bool dp_manual_pullup;
+	bool enable_sec_phy;
+	struct msm_bus_scale_pdata *bus_scale_table;
+	const char *mhl_dev_name;
+	int log2_itc;
+	bool l1_supported;
+	bool dpdm_pulldown_added;
+	int vddmin_gpio;
+	bool rw_during_lpm_workaround;
+	bool enable_ahb2ahb_bypass;
+	bool disable_retention_with_vdd_min;
+	int usb_id_gpio;
+	int hub_reset_gpio;
+	int switch_sel_gpio;
+	int usbid_switch;
+	bool phy_dvdd_always_on;
+	bool emulation;
+	bool enable_streaming;
+	bool enable_axi_prefetch;
+	struct clk *system_clk;
+	struct clk *pclk;
 };
 
 /**

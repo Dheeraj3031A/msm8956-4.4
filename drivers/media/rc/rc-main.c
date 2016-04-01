@@ -738,6 +738,16 @@ EXPORT_SYMBOL_GPL(rc_open);
 static int ir_open(struct input_dev *idev)
 {
 	struct rc_dev *rdev = input_get_drvdata(idev);
+	int rc = 0;
+
+	mutex_lock(&rdev->lock);
+	if (!rdev->open_count++)
+		rc = rdev->open(rdev);
+	if (rc < 0)
+		rdev->open_count--;
+	mutex_unlock(&rdev->lock);
+
+	return rc;
 
 	return rc_open(rdev);
 }

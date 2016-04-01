@@ -613,6 +613,7 @@ static int qpnp_rtc_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, 1);
 	enable_irq_wake(rtc_dd->rtc_alarm_irq);
+	rtc_sysfs_add_device(rtc_dd->rtc);
 
 	dev_dbg(&pdev->dev, "Probe success !!\n");
 

@@ -474,6 +474,75 @@ config BATTERY_BQ28400
 	  The device monitors the battery level (Relative-State-Of-Charge).
 	  The device is SBS compliant, providing battery info over I2C.
 
+config QPNP_CHARGER
+	tristate "QPNP Charger driver"
+	depends on SPMI
+	depends on OF_SPMI
+	depends on THERMAL_QPNP_ADC_TM
+	help
+	  Say Y here to enable the switch mode battery charger
+	  and boost device which supports USB detection and charging. The driver
+	  also offers relevant information to userspace via the power supply
+	  framework.
+
+config QPNP_SMBCHARGER
+	tristate "QPNP SMB Charger driver"
+	depends on SPMI
+	depends on OF_SPMI
+	help
+	  Say Y here to enable the dual path switch mode battery charger which
+	  supports USB detection and battery charging up to 3A.
+	  The driver also offers relevant information to userspace via the
+	  power supply framework.
+
+config TEMP_CHARGE_DISABLE
+	bool "Enable smb1360 disable charging when temp is too hot or too cold"
+	depends on QPNP_SMBCHARGER
+	help
+	  Say Y to enable SMB1360 disable charging,this feature is designed for
+	  protect battery.
+
+config BOARDTEMP_WORK
+	bool "Enable board ntc sensor monitor work."
+	depends on QPNP_SMBCHARGER
+	  help
+	  Say Y to enable SMB1360 board ntc(temp sensor) work if board ntc is
+	  placed. If there is not ntc on board,this feature must be close
+	  becase this will cause chaos.
+
+config QPNP_FG
+	tristate "QPNP fuel gauge driver"
+	depends on SPMI
+	depends on OF_SPMI
+	help
+	  Say Y here to enable the Fuel Gauge driver. This adds support for
+	  battery fuel gauging and state of charge of battery connected to the
+	  fuel gauge. The state of charge is reported through a BMS power
+	  supply property and also sends uevents when the capacity is updated.
+
+config PM8921_BMS
+	tristate "PM8921 Battery Monitoring System driver"
+	depends on MFD_PM8921_CORE
+	help
+	  Say Y here to enable support for pm8921 chip bms subdevice
+
+config BATTERY_BCL
+	tristate "Battery Current Limit driver"
+	depends on THERMAL_MONITOR
+	help
+	  Say Y here to enable support for battery current limit
+	  device. The BCL driver will poll BMS if
+	  thermal daemon enables BCL.
+	  It will notify thermal daemon if IBat crosses Imax threshold.
+
+config CHARGER_SMB347
+	tristate "Summit Microelectronics SMB347 Battery Charger"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  Say Y to include support for Summit Microelectronics SMB347
+	  Battery Charger.
+
 config CHARGER_TPS65090
 	tristate "TPS65090 battery charger driver"
 	depends on MFD_TPS65090

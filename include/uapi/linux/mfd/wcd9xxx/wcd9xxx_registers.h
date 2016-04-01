@@ -358,4 +358,5 @@
 #define WCD9XXX_HPH_NEW_INT_PA_MISC2			(0x0738)
 #define WCD9XXX_RX_BIAS_HPH_LOWPOWER			(0x06bf)
 #define WCD9XXX_HPH_PA_CTL1				(0x06d1)
+#define WCD9XXX_CLASSH_CTRL_CCL_1                       (0x69C)
 #endif

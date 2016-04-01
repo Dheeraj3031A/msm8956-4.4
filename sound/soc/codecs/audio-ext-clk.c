@@ -48,6 +48,24 @@ struct pinctrl_info {
 	struct pinctrl_state *active;
 };
 
+#if defined(CONFIG_WCD9335_CODEC_MCLK_USE_MSM_GPIO)
+#include <sound/q6afe-v2.h>
+#include <linux/io.h>
+
+#define LPASS_CSR_GP_IO_MUX_MIC_CTL 0x07702000
+#define LPASS_CSR_GP_IO_MUX_SPKR_CTL 0x07702004
+
+enum ap_clk_mux {
+	AP_CLK1 = 1,
+	AP_CLK2,
+};
+struct pinctrl_info {
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *sleep;
+	struct pinctrl_state *active;
+};
+#endif
+
 struct audio_ext_ap_clk {
 	bool enabled;
 	int gpio;
@@ -73,6 +91,17 @@ static struct afe_clk_set clk2_config = {
 	Q6AFE_LPASS_CLK_ROOT_DEFAULT,
 	0,
 };
+#if defined(CONFIG_WCD9335_CODEC_MCLK_USE_MSM_GPIO)
+struct audio_ext_ap_clk1 {
+	bool enabled;
+	struct pinctrl_info pinctrl_info;
+	u32 mclk_freq;
+	struct clk c;
+};
+
+struct afe_digital_clk_cfg tasha_digital_cdc_clk;
+struct afe_clk_cfg tasha_cdc_clk;
+#endif
 
 static inline struct audio_ext_ap_clk *to_audio_ap_clk(struct clk *clk)
 {
@@ -81,6 +110,41 @@ static inline struct audio_ext_ap_clk *to_audio_ap_clk(struct clk *clk)
 
 static int audio_ext_clk_prepare(struct clk *clk)
 {
+#if defined(CONFIG_WCD9335_CODEC_MCLK_USE_MSM_GPIO)
+	int ret = 0;
+	int val = 0;
+	void __iomem *vaddr = NULL;
+
+	tasha_digital_cdc_clk.i2s_cfg_minor_version = AFE_API_VERSION_I2S_CONFIG;
+	tasha_digital_cdc_clk.clk_val = 9600000;
+	tasha_digital_cdc_clk.clk_root = 5;
+	tasha_digital_cdc_clk.reserved = 0;
+
+	vaddr = ioremap(LPASS_CSR_GP_IO_MUX_SPKR_CTL, 4);
+
+	val = ioread32(vaddr);
+	val = val | 0x00000002;
+	iowrite32(val, vaddr);
+
+	vaddr = ioremap(LPASS_CSR_GP_IO_MUX_MIC_CTL, 4);
+
+	val = ioread32(vaddr);
+	val = val | 0x00000002;
+	iowrite32(val, vaddr);
+
+	ret =  afe_set_digital_codec_core_clock(AFE_PORT_ID_PRIMARY_MI2S_RX, &tasha_digital_cdc_clk);
+
+	pr_err("%s afe_set_digital_codec_core_clock ret %d \n", __func__, ret);
+
+	if (ret < 0) {
+		pr_err("%s afe_set_digital_codec_core_clock failed\n",
+			__func__);
+		goto err;
+	}
+	return 0;
+err:
+	return ret;
+#else
 	struct audio_ext_ap_clk *audio_clk = to_audio_ap_clk(clk);
 
 	pr_debug("%s: gpio: %d\n", __func__, audio_clk->gpio);
@@ -151,6 +215,74 @@ static void audio_ext_clk2_unprepare(struct clk *clk)
 	if (ret < 0)
 		pr_err("%s: failed to reset clock, ret = %d\n", __func__, ret);
 }
+
+#if defined(CONFIG_WCD9335_CODEC_MCLK_USE_MSM_GPIO)
+static inline struct audio_ext_ap_clk1 *to_audio_ap_clk1(struct clk *clk)
+{
+	return container_of(clk, struct audio_ext_ap_clk1, c);
+}
+
+static int audio_ext_clk1_prepare(struct clk *clk)
+{
+	struct audio_ext_ap_clk1 *audio_clk1 = to_audio_ap_clk1(clk);
+	struct pinctrl_info *pinctrl_info = &audio_clk1->pinctrl_info;
+
+	int ret;
+	pr_err("debug %s \n", __func__);
+	tasha_cdc_clk.i2s_cfg_minor_version = AFE_API_VERSION_I2S_CONFIG;
+	tasha_cdc_clk.clk_val1 = Q6AFE_LPASS_IBIT_CLK_1_P536_MHZ;
+	tasha_cdc_clk.clk_val2 = Q6AFE_LPASS_OSR_CLK_9_P600_MHZ;
+	tasha_cdc_clk.clk_src = Q6AFE_LPASS_CLK_SRC_INTERNAL;
+	tasha_cdc_clk.clk_root = 5;
+	tasha_cdc_clk.clk_set_mode = Q6AFE_LPASS_MODE_BOTH_VALID;
+	tasha_cdc_clk.reserved = 0;
+
+	ret = pinctrl_select_state(pinctrl_info->pinctrl,
+		pinctrl_info->active);
+	if (ret) {
+		pr_err("%s: active state select failed with %d\n",
+			__func__, ret);
+		ret = -EIO;
+		goto err;
+	}
+
+	ret =  afe_set_lpass_clock(AFE_PORT_ID_PRIMARY_MI2S_RX, &tasha_cdc_clk);
+
+	if (ret < 0) {
+		pr_err("%s afe_set_lpass_clock failed\n",
+			__func__);
+		goto err;
+	}
+
+err:
+	return 0;
+}
+
+static void audio_ext_clk1_unprepare(struct clk *clk)
+{
+	struct audio_ext_ap_clk1 *audio_clk1 = to_audio_ap_clk1(clk);
+	struct pinctrl_info *pinctrl_info = &audio_clk1->pinctrl_info;
+
+	int ret;
+
+	ret = pinctrl_select_state(pinctrl_info->pinctrl,
+		pinctrl_info->sleep);
+	if (ret) {
+		pr_err("%s: sleep state select failed with %d\n",
+			__func__, ret);
+	}
+
+	tasha_cdc_clk.clk_val1 = Q6AFE_LPASS_IBIT_CLK_DISABLE;
+	ret =  afe_set_lpass_clock(AFE_PORT_ID_PRIMARY_MI2S_RX, &tasha_cdc_clk);
+
+	if (ret < 0) {
+		pr_err("%s afe_set_lpass_clock failed\n",
+			__func__);
+	}
+
+	return;
+}
+#endif
 
 static struct clk_ops audio_ext_ap_clk_ops = {
 	.prepare = audio_ext_clk_prepare,
@@ -259,6 +391,18 @@ static int audio_ref_clk_probe(struct platform_device *pdev)
 	int ret;
 	struct clk *audio_clk;
 
+#if defined(CONFIG_WCD9335_CODEC_MCLK_USE_MSM_GPIO)
+	ret = of_property_read_u32(pdev->dev.of_node,
+									"qcom,codec-mclk-clk-freq",
+									&audio_ap_clk1.mclk_freq);
+	if (audio_ap_clk1.mclk_freq == 9600000) {
+		ret = audio_get_pinctrl(pdev, AP_CLK1);
+		if (ret) {
+			pr_err("debug %s: Parsing pinctrl failed\n",
+				__func__);
+		}
+	} else {
+#endif
 	clk_gpio = of_get_named_gpio(pdev->dev.of_node,
 				     "qcom,audio-ref-clk-gpio", 0);
 	if (clk_gpio > 0) {

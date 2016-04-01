@@ -2,6 +2,7 @@
  *  linux/init/main.c
  *
  *  Copyright (C) 1991, 1992  Linus Torvalds
+ *  Copyright (C) 2016 XiaoMi, Inc.
  *
  *  GK 2/5/95  -  Changed to support mounting root fs via NFS
  *  Added initrd & change_root: Werner Almesberger & Hans Lermen, Feb '96
@@ -492,6 +493,7 @@ static void __init mm_init(void)
 	ioremap_huge_init();
 	kaiser_init();
 }
+int lct_hardwareid = 2;
 
 asmlinkage __visible void __init start_kernel(void)
 {
@@ -535,6 +537,26 @@ asmlinkage __visible void __init start_kernel(void)
 
 	pr_notice("Kernel command line: %s\n", boot_command_line);
 	/* parameters may set static keys */
+	p = strstr(boot_command_line, "androidboot.boardID=0");
+	if (p) {
+		lct_hardwareid = 0;
+	}
+	p = NULL;
+	p = strstr(boot_command_line, "androidboot.boardID=2");
+	if (p) {
+		lct_hardwareid = 2;
+	}
+	p = NULL;
+	p = strstr(boot_command_line, "androidboot.boardID=3");
+	if (p) {
+		lct_hardwareid = 3;
+	}
+
+	parse_early_param();
+	parse_args("Booting kernel", static_command_line, __start___param,
+		   __stop___param - __start___param,
+		   -1, -1, &unknown_bootoption);
+
 	jump_label_init();
 	parse_early_param();
 	after_dashes = parse_args("Booting kernel",

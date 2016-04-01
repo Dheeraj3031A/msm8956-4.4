@@ -49,6 +49,7 @@
 #include <sync.h>
 #include <sw_sync.h>
 
+#include "mdss_dsi.h"
 #include "mdss_fb.h"
 #include "mdss_mdp_splash_logo.h"
 #include "mdss_mdp.h"
@@ -699,7 +700,7 @@ static ssize_t mdss_fb_force_panel_dead(struct device *dev,
  * This Function dynamically switches to and from video mode. This
  * swtich involves the panel turning off backlight during trantision.
  */
-static int mdss_fb_blanking_mode_switch(struct msm_fb_data_type *mfd, int mode)
+static int mdss_fb_blanking_mode_switch (struct msm_fb_data_type *mfd, int mode)
 {
 	int ret = 0;
 	u32 bl_lvl = 0;
@@ -847,6 +848,8 @@ static ssize_t mdss_fb_get_dfps_mode(struct device *dev,
 
 	return ret;
 }
+extern  void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
+			struct dsi_panel_cmds *pcmds);
 
 static ssize_t mdss_fb_change_persist_mode(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t len)
@@ -1959,7 +1962,6 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 	}
 
 	pdata = dev_get_platdata(&mfd->pdev->dev);
-
 	if ((pdata) && (pdata->set_backlight)) {
 		if (mfd->mdp.ad_calc_bl)
 			(*mfd->mdp.ad_calc_bl)(mfd, temp, &temp,
@@ -2148,7 +2150,7 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
 
 	return ret;
 }
-
+int esd_backlight = 0;
 static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
 {
 	int ret = 0;
@@ -4042,7 +4044,7 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 		MDSS_XLOG(mfd->index, mfd->split_mode, new_dsi_mode,
 			XLOG_FUNC_ENTRY);
 		pr_debug("Triggering dyn mode switch to %d\n", new_dsi_mode);
-		ret = mfd->mdp.mode_switch(mfd, new_dsi_mode);
+		ret = mfd->mdp.mode_switch (mfd, new_dsi_mode);
 		if (ret)
 			pr_err("DSI mode switch has failed");
 		else
@@ -5258,7 +5260,7 @@ static int mdss_fb_mode_switch(struct msm_fb_data_type *mfd, u32 mode)
 	if (pinfo->mipi.dms_mode == DYNAMIC_MODE_SWITCH_SUSPEND_RESUME) {
 		ret = mdss_fb_blanking_mode_switch(mfd, mode);
 	} else if (pinfo->mipi.dms_mode == DYNAMIC_MODE_SWITCH_IMMEDIATE) {
-		ret = mdss_fb_immediate_mode_switch(mfd, mode);
+	ret = mdss_fb_immediate_mode_switch(mfd, mode);
 	} else {
 		pr_warn("Panel does not support dynamic mode switch!\n");
 		ret = -EPERM;

@@ -4255,9 +4255,6 @@ static irqreturn_t fg_batt_missing_irq_handler(int irq, void *_chip)
 		}
 	}
 
-	if (fg_debug_mask & FG_IRQS)
-		pr_info("batt-missing triggered: %s\n",
-				batt_missing ? "missing" : "present");
 
 	if (chip->power_supply_registered)
 		power_supply_changed(chip->bms_psy);

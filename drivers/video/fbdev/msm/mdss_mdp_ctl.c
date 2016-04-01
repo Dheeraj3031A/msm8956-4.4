@@ -5627,7 +5627,63 @@ int mdss_mdp_ctl_update_fps(struct mdss_mdp_ctl *ctl)
 	int ret = 0;
 	int new_fps;
 
-	if (!ctl->panel_data || !ctl->mfd)
+	pinfo = &ctl->panel_data->panel_info;
+	if (!pinfo) {
+		ret = -ENODEV;
+		goto exit;
+	}
+
+	if (!pinfo->dynamic_fps || !ctl->ops.config_fps_fnc)
+		goto exit;
+
+	if (ctl->mfd)
+		mdp5_data = mfd_to_mdp5_data(ctl->mfd);
+
+	if (!mdp5_data) {
+		ret = -ENODEV;
+		goto exit;
+	}
+
+	mutex_lock(&mdp5_data->dfps_lock);
+	new_fps = pinfo->new_fps;
+	mutex_unlock(&mdp5_data->dfps_lock);
+
+	if (new_fps == pinfo->mipi.frame_rate) {
+		pr_debug("%s: FPS is already %d\n",
+			__func__, new_fps);
+		goto exit;
+	}
+
+	ATRACE_BEGIN("config_fps");
+	ret = ctl->ops.config_fps_fnc(ctl, new_fps);
+	if (!ret) {
+		pr_debug("%s: configured to '%d' FPS\n", __func__,
+				new_fps);
+	} else {
+		pr_err("Failed to configure '%d' FPS. rc = %d\n",
+				new_fps, ret);
+	}
+	ATRACE_END("config_fps");
+
+exit:
+
+	return ret;
+}
+
+int mdss_mdp_display_wakeup_time(struct mdss_mdp_ctl *ctl,
+				 ktime_t *wakeup_time)
+{
+	struct mdss_panel_info *pinfo;
+	u32 clk_rate, clk_period;
+	u32 current_line, total_line;
+	u32 time_of_line, time_to_vsync;
+	ktime_t current_time = ktime_get();
+
+	if (!ctl->ops.read_line_cnt_fnc)
+		return -ENOSYS;
+
+	pinfo = &ctl->panel_data->panel_info;
+	if (!pinfo)
 		return -ENODEV;
 
 	pinfo = &ctl->panel_data->panel_info;

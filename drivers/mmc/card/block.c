@@ -3991,6 +3991,8 @@ static int mmc_blk_cmdq_issue_rq(struct mmc_queue *mq, struct request *req)
 	struct mmc_blk_data *md = mq->data;
 	struct mmc_card *card = md->queue.card;
 	unsigned int cmd_flags = req ? req->cmd_flags : 0;
+	struct mmc_host *host = card->host;
+	struct mmc_cmdq_context_info *ctx = &host->cmdq_ctx;
 
 	mmc_get_card(card);
 
@@ -4070,6 +4072,35 @@ out:
 		blk_end_request_all(req, ret);
 	mmc_put_card(card);
 
+	if ((cmd_flags & (REQ_FLUSH | REQ_DISCARD)) &&
+			(card->quirks & MMC_QUIRK_CMDQ_EMPTY_BEFORE_DCMD) &&
+			ctx->active_small_sector_read_reqs) {
+		ret = wait_event_interruptible(ctx->queue_empty_wq,
+					!ctx->active_reqs);
+		if (ret) {
+			pr_err("%s: failed while waiting for the CMDQ to be empty %s err (%d)\n",
+				mmc_hostname(host),
+				__func__, ret);
+			BUG_ON(1);
+		}
+		/* clear the counter now */
+		ctx->active_small_sector_read_reqs = 0;
+		udelay(MMC_QUIRK_CMDQ_DELAY_BEFORE_DCMD);
+	}
+
+	if (cmd_flags & REQ_DISCARD) {
+		if (cmd_flags & REQ_SECURE &&
+			!(card->quirks & MMC_QUIRK_SEC_ERASE_TRIM_BROKEN))
+			ret = mmc_blk_cmdq_issue_secdiscard_rq(mq, req);
+		else
+			ret = mmc_blk_cmdq_issue_discard_rq(mq, req);
+	} else if (cmd_flags & REQ_FLUSH) {
+		ret = mmc_blk_cmdq_issue_flush_rq(mq, req);
+	} else {
+		ret = mmc_blk_cmdq_issue_rw_rq(mq, req);
+	}
+
+switch_failure:
 	return ret;
 }
 

@@ -92,6 +92,10 @@ static irqreturn_t mmc_gpio_cd_irqt(int irq, void *dev_id)
 	status = mmc_gpio_get_status(host);
 	if (unlikely(status < 0))
 		goto out;
+	#if SD_VDD_IS_NOT_OPEN_IF_SLOT_NOT_INSERT
+	sd_slot_plugoutt = gpio_get_value_cansleep(ctx->cd_gpio);
+	#endif
+	pr_err(" mmc_gpio_cd_irqt sd_slot_plugoutt = %d\n", sd_slot_plugoutt);
 
 	if (status == 0)
 		mmc_gpio_set_uim2_en(host, 0);
@@ -119,7 +123,13 @@ static irqreturn_t mmc_gpio_cd_irqt(int irq, void *dev_id)
 		ctx->suspended = false;
 #endif
 		/* Schedule a card detection after a debounce timeout */
-		mmc_detect_change(host, msecs_to_jiffies(200));
+		if (sd_slot_plugoutt == 1) {
+
+			if ((sd_slot_plugoutt == 1) && (mmc_hostname(host) != NULL) && (!strcmp(mmc_hostname(host), "mmc1")))
+				sdhci_msm_disable_sd_vdd();
+			mmc_detect_change(host, msecs_to_jiffies(0));
+		} else
+			mmc_detect_change(host, msecs_to_jiffies(200));
 	}
 out:
 

@@ -987,4 +987,10 @@ config MSM_BAM_DMUX
 	  provides a means to support more logical channels
 	  via muxing than BAM could without muxing.
 
+config SERIAL_NUM
+	bool "Enable Serial Number Proc Interface"
+	help
+	  Provide a interface for reading CPU serial number
+
+
 source "drivers/soc/qcom/memshare/Kconfig"
